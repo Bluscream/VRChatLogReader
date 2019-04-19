@@ -7,9 +7,9 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using NDesk.Options;
-using VRChatApi;
+/*using VRChatApi;
 using VRChatApi.Classes;
-using VRChatApi.Endpoints;
+using VRChatApi.Endpoints;*/
 
 namespace VRChatLogReader
 {
@@ -18,15 +18,16 @@ namespace VRChatLogReader
         static async Task Main(string[] args)
         {
             Console.Title = "VRChat Log Reader";
-            var file = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "..", "LocalLow", "VRChat", "vrchat", "output_log.txt");
+            DirectoryInfo logDir = new DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "..", "LocalLow", "VRChat", "vrchat"));
+            var lastLog = logDir.GetFiles().OrderByDescending(f => f.LastWriteTime).First().FullName;
             //ClearLog(file);
-
+            /*
             VRChatApi.VRChatApi api = new VRChatApi.VRChatApi("", "");
             System.Console.WriteLine(api);
             System.Console.WriteLine("Logging in...");
             UserResponse user = await api.UserApi.Login();
             System.Console.WriteLine("Logged in as {0}", user.username);
-
+            */
             bool joins_only = false;
 
             var p = new OptionSet() { { "j|joins|joinsonly", "Only show joins/leaves", v => joins_only = v != null }
@@ -36,12 +37,12 @@ namespace VRChatLogReader
 
             var wh = new AutoResetEvent(false);
             var fsw = new FileSystemWatcher(".");
-            fsw.Filter = file;
+            fsw.Filter = lastLog;
             fsw.EnableRaisingEvents = true;
             fsw.Changed += (s, e) => wh.Set();
 
             var fs = new FileStream(fsw.Filter, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            UInt64 i = 0;
+            //UInt64 i = 0;
             using (var sr = new StreamReader(fs))
             {
                 var s = "";
@@ -49,6 +50,8 @@ namespace VRChatLogReader
                 {
                     s = sr.ReadLine();
                     if (s != null && !string.IsNullOrWhiteSpace(s)) {
+                        if (joins_only && (!s.Contains("OnPlayerJoined") && !s.Contains("OnPlayerLeft") && !s.Contains("OnJoinedRoom") && !s.Contains("OnLeftRoom"))) continue;
+                        /*
                         LogLine line = ParseLine(s);
                         if (joins_only)
                         {
@@ -57,9 +60,11 @@ namespace VRChatLogReader
                                 line.EventType != EventType.OnJoinedRoom && line.EventType != EventType.OnLeftRoom) continue;
                         }
                         Console.WriteLine(@"<{0}> [{1}] {2} ({3}): {4}", line.DateTime.ToString(), line.Category.ToString(), line.Logger.ToString(), line.EventType.ToString(), line.Message);
-                        i += 1;
+                        */
+                        Console.WriteLine(s);
+                        //i += 1;
                     } else {
-                        //wh.WaitOne(1);
+                        wh.WaitOne(50);
                     }
                 }
             }
